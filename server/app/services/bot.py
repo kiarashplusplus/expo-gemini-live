@@ -45,13 +45,16 @@ class PipecatBotRunner:
             return
 
         try:
-            pipeline, runner = self._build_pipeline(config)
+            pipeline, task = self._build_pipeline(config)
         except Exception as exc:  # pragma: no cover - import/config failures
             logger.exception("Failed to build Pipecat pipeline")
             raise
 
         logger.info("Starting Pipecat runner for %s", config.session_id)
-        await runner.run()
+        from pipecat.pipeline.runner import PipelineRunner
+
+        runner = PipelineRunner(name=f"pipecat-runner-{config.session_id}")
+        await runner.run(task)
         logger.info("Pipecat runner finished for %s", config.session_id)
 
     def _build_pipeline(self, config: BotSessionConfig):
@@ -64,7 +67,6 @@ class PipecatBotRunner:
         from pipecat.audio.vad.silero import SileroVADAnalyzer
         from pipecat.audio.vad.vad_analyzer import VADParams
         from pipecat.pipeline.pipeline import Pipeline
-        from pipecat.pipeline.runner import PipelineRunner
         from pipecat.pipeline.task import PipelineParams, PipelineTask
         from pipecat.processors.aggregators.llm_context import LLMContext
         from pipecat.processors.aggregators.llm_response_universal import (
@@ -115,8 +117,7 @@ class PipecatBotRunner:
             params=PipelineParams(enable_metrics=True, enable_usage_metrics=True),
         )
 
-        runner = PipelineRunner(task)
-        return pipeline, runner
+        return pipeline, task
 
     def build_task(self, config: BotSessionConfig) -> asyncio.Task:
         """Convenience helper for spawning the pipeline in the background."""
