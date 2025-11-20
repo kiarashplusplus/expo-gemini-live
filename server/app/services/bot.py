@@ -54,7 +54,16 @@ class PipecatBotRunner:
         from pipecat.pipeline.runner import PipelineRunner
 
         runner = PipelineRunner(name=f"pipecat-runner-{config.session_id}")
-        await runner.run(task)
+        try:
+            await runner.run(task)
+        except Exception as exc:
+            logger.error(
+                "Pipecat runner failed for session %s using model %s: %s",
+                config.session_id,
+                self._settings.google_model,
+                exc,
+            )
+            raise
         logger.info("Pipecat runner finished for %s", config.session_id)
 
     def _build_pipeline(self, config: BotSessionConfig):
@@ -66,14 +75,32 @@ class PipecatBotRunner:
         from pipecat.audio.turn.smart_turn.base_smart_turn import SmartTurnParams
         from pipecat.audio.vad.silero import SileroVADAnalyzer
         from pipecat.audio.vad.vad_analyzer import VADParams
+        from pipecat.frames.frames import Frame, UserImageRawFrame
         from pipecat.pipeline.pipeline import Pipeline
         from pipecat.pipeline.task import PipelineParams, PipelineTask
         from pipecat.processors.aggregators.llm_context import LLMContext
         from pipecat.processors.aggregators.llm_response_universal import (
             LLMContextAggregatorPair,
         )
-        from pipecat.services.google.gemini_live.llm import GeminiLiveLLMService, InputParams
+        from pipecat.processors.frame_processor import FrameDirection, FrameProcessor
+        from pipecat.services.google.gemini_live.llm import (
+            GeminiLiveLLMService,
+            GeminiMediaResolution,
+            InputParams,
+        )
         from pipecat.transports.daily.transport import DailyParams, DailyTransport
+
+        class VideoDebugProcessor(FrameProcessor):
+            """Logs when Pipecat encounters video frames while forwarding them."""
+
+            async def process_frame(self, frame: Frame, direction: FrameDirection):
+                if isinstance(frame, UserImageRawFrame):
+                    logger.debug(
+                        "VideoDebugProcessor observed frame (participant=%s, frame_size=%s)",
+                        getattr(frame, "participant_id", "unknown"),
+                        getattr(frame.image, "size", "n/a") if hasattr(frame, "image") else "n/a",
+                    )
+                await self.push_frame(frame, direction)
 
         transport_params = DailyParams(
             api_key=self._settings.daily_api_key or "",
@@ -89,12 +116,19 @@ class PipecatBotRunner:
             params=transport_params,
         )
 
+        input_params_kwargs: Dict[str, Any] = {"language": self._settings.google_language}
+        if self._settings.enable_video_pipeline:
+            input_params_kwargs["extra"] = {
+                "media_resolution": GeminiMediaResolution.MEDIUM.value,
+                "staging": "Video pipeline flag enabled",
+            }
+
         llm = GeminiLiveLLMService(
             api_key=self._settings.google_api_key or "",
             model=self._settings.google_model,
             voice_id=self._settings.google_voice_id,
             system_instruction=self._settings.system_instruction,
-            params=InputParams(language=self._settings.google_language),
+            params=InputParams(**input_params_kwargs),
         )
 
         context = LLMContext()
@@ -102,15 +136,14 @@ class PipecatBotRunner:
             context.add_message({"role": "system", "content": self._settings.system_instruction})
         aggregators = LLMContextAggregatorPair(context)
 
-        pipeline = Pipeline(
-            [
-                transport.input(),
-                aggregators.user(),
-                llm,
-                aggregators.assistant(),
-                transport.output(),
-            ]
-        )
+        pipeline_stages = [transport.input(), aggregators.user()]
+        if self._settings.enable_video_pipeline:
+            pipeline_stages.append(VideoDebugProcessor())
+            logger.debug("Video pipeline staging enabled for session %s", config.session_id)
+
+        pipeline_stages.extend([llm, aggregators.assistant(), transport.output()])
+
+        pipeline = Pipeline(pipeline_stages)
 
         task = PipelineTask(
             pipeline,

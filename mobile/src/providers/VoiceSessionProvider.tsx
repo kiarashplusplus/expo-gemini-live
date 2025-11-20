@@ -1,6 +1,7 @@
 import React, { PropsWithChildren, createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
 
 import { buildStartPayload, getStartEndpoint, stopSession } from '@/api/rtvi';
+import { useDevicePermissions } from '@/hooks/useDevicePermissions';
 import { useVoiceStore } from '@/state/voiceStore';
 import { StartSessionRequest, TranscriptMessage } from '@/types/rtvi';
 import { getLastFetchErrorInfo } from '@/utils/fetchPolyfill';
@@ -53,6 +54,7 @@ export const VoiceSessionProvider = ({ children }: PropsWithChildren) => {
   const activeBaseUrl = useVoiceStore((state) => state.activeBaseUrl);
   const session = useVoiceStore((state) => state.session);
   const transportState = useVoiceStore((state) => state.transportState);
+  const { hasPermissions, requestPermissions } = useDevicePermissions();
 
   const clientRef = useRef<PipecatClient | null>(null);
   const transportRef = useRef<RNDailyTransport | null>(null);
@@ -109,8 +111,29 @@ export const VoiceSessionProvider = ({ children }: PropsWithChildren) => {
     setActiveBaseUrl(form.apiBaseUrl);
     await destroyClient();
 
+    if (!hasPermissions) {
+      const granted = await requestPermissions();
+      if (!granted) {
+        setError('Camera and microphone permissions are required for video.');
+        setStatus('error');
+        return;
+      }
+    }
+
     const transport = new RNDailyTransport();
     transportRef.current = transport;
+
+    try {
+      await transport.initDevices();
+      transport.enableCam(true);
+      transport.enableMic(true);
+      refreshTracks();
+    } catch (deviceError) {
+      console.warn('Failed to initialize AV devices', deviceError);
+      setStatus('error');
+      setError('Unable to initialize camera or microphone.');
+      return;
+    }
 
     const callbacks: RTVIEventCallbacks = {
       onConnected: () => setStatus('connected'),
@@ -187,7 +210,7 @@ export const VoiceSessionProvider = ({ children }: PropsWithChildren) => {
     }
   }, [
     destroyClient,
-    form,
+  form,
   refreshTracks,
     resetTranscripts,
     setActiveBaseUrl,
@@ -195,7 +218,9 @@ export const VoiceSessionProvider = ({ children }: PropsWithChildren) => {
     setError,
     setLevels,
     setSession,
-    setStatus,
+  setStatus,
+  hasPermissions,
+  requestPermissions,
     setTransportState,
     status,
     upsertTranscript,

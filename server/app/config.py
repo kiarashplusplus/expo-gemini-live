@@ -45,6 +45,10 @@ class Settings(BaseSettings):
     session_ttl_seconds: int = Field(default=900, ge=60)
     cleanup_interval_seconds: int = Field(default=60, ge=10)
     bot_runner_enabled: bool = Field(default=True)
+    enable_video_pipeline: bool = Field(
+        default=False,
+        description="Feature flag for staging Gemini Live video-specific pipeline logic.",
+    )
 
     # Feature flags
     dummy_tokens_enabled: bool = Field(

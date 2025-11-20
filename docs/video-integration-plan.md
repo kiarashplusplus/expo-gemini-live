@@ -78,7 +78,7 @@ If the camera capture helper introduced in v0.0.95 (`maybe_capture_participant_c
 - [ ] Capture exact Pipecat example snippet once we have a local copy of `26-gemini-multimodal-live.py` (track GitHub release or vendor files).
 - [ ] Document env overrides for switching to `gemini-live-2.5-flash` (`http_options=HttpOptions(api_version="v1alpha")`, `InputParams.modalities`).
 - [ ] Ensure the Expo app pins `@pipecat-ai/react-native-daily-transport` ≥ the version that forwards video frames.
-- [ ] Extend `server/app/services/bot.py` to toggle video-specific InputParams once Gemini Live video is available.
+- [x] Extend `server/app/services/bot.py` to toggle video-specific InputParams once Gemini Live video is available (gated behind `ENABLE_VIDEO_PIPELINE`, adds `VideoDebugProcessor`, and enriches `InputParams.extra`).
 - [ ] Define a verification script (pytest + manual Expo call) to run after every config change.
 
 Refer back to this file whenever the dev tunnel resets or the workspace reloads.
@@ -130,12 +130,12 @@ Refer back to this file whenever the dev tunnel resets or the workspace reloads.
     - Ensure `@daily-co/react-native-webrtc` stays in sync; the RN transport depends on it for camera tracks.
 
 2. **Transport wiring** (`VoiceSessionProvider`)
-    - `enableCam: true` is already passed to `PipecatClient`. Add explicit `await transport.initDevices()` before `client.startBotAndConnect` to prompt camera permissions and ensure a track exists before join.
-    - Subscribe to `transport.tracks()` changes via `onTrackStarted` / `onTrackStopped` (already implemented) and confirm `tracks.local.video` is non-null. Surface this in the UI so testers can see their preview before the bot joins.
+    - `enableCam: true` is already passed to `PipecatClient`. Added explicit `await transport.initDevices()` before `client.startBotAndConnect` plus a permission gate so the camera initializes prior to joining the room.
+    - Subscribe to `transport.tracks()` changes via `onTrackStarted` / `onTrackStopped` (already implemented) and confirm `tracks.local.video` is non-null. The provider now stores track snapshots immediately after device init so the UI can render a preview tile before the bot joins.
 
 3. **UI updates** (`SessionScreen`)
     - Split the `VoiceClientVideoView` into two panes: local preview (using `tracks.local.video`) and remote bot track. This makes it obvious whether the camera stream is active.
-    - Add state badges that reflect `transportState` (e.g., `initializing`, `ready`) so it is easier to debug connection resets.
+    - Add state badges that reflect `transportState` (e.g., `initializing`, `ready`) so it is easier to debug connection resets. A `Restart Session` control now calls `disconnect()` then `connect()` to recover transport issues without leaving the screen.
 
 4. **Testing checklist**
     - Run `npx expo start --clear` and launch on iOS Simulator/physical device.

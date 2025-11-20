@@ -67,6 +67,7 @@ pytest server/tests -q
 | `MOCK_DAILY` | Set to `true` to bypass Daily REST calls and generate mock tokens. |
 | `ALLOW_ORIGINS` | JSON array (e.g., `["http://localhost:8081"]`) of Expo dev server URLs for CORS. |
 | `BOT_RUNNER_ENABLED` | Toggle to disable the Pipecat runner during tests. |
+| `ENABLE_VIDEO_PIPELINE` | Gates Gemini Live video InputParams + debug processors so you can stage the flow before Pipecat emits webcam frames. |
 
 See `.env.example` for the complete list with defaults.
 
@@ -75,8 +76,8 @@ See `.env.example` for the complete list with defaults.
 The Expo client now includes:
 
 - A **Pre-Join** experience where you can set the FastAPI base URL, choose your display name, and provide a short system prompt.
-- A **Session** screen with a Daily-powered video view, live transcripts, audio meters, and controls to send text prompts or hang up.
-- A reusable `VoiceSessionProvider` that wraps the Pipecat RN SDK + Daily transport, handles permissions, and streams transcripts/audio levels through Zustand state.
+- A **Session** screen with split Daily-powered video panes (local preview + Gemini remote feed), live transcripts, audio meters, and controls to send text prompts, restart the transport, or hang up.
+- A reusable `VoiceSessionProvider` that wraps the Pipecat RN SDK + Daily transport, handles camera/mic permissions, primes devices via `transport.initDevices()`, and streams transcripts/audio levels through Zustand state.
 
 Because Pipecat relies on native Daily modules, this project uses the [@daily-co/config-plugin-rn-daily-js](https://github.com/daily-co/rn-daily-js-expo-config-plugin) plugin. You need to generate development builds (Expo Go will not load the native modules).
 
@@ -100,7 +101,7 @@ Because Pipecat relies on native Daily modules, this project uses the [@daily-co
    ```
    > Tip: use `npx expo start --dev-client --tunnel` if running on a physical device that needs to reach your local backend.
 
-Inside the app, tap **Start Conversation** on the Pre-Join screen. The provider will request camera/mic permissions, call `POST /api/rtvi/start`, join the Daily room via `RNDailyTransport`, and render the conversation with Gemini Live.
+Inside the app, tap **Start Conversation** on the Pre-Join screen. The provider will request camera/mic permissions up front, call `POST /api/rtvi/start`, join the Daily room via `RNDailyTransport`, and render the conversation with Gemini Live. Use the new **Restart Session** button on the session screen if you need to cycle the transport without leaving the call.
 
 ## Additional Documentation
 
