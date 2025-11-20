@@ -60,7 +60,5 @@ export type TranscriptMessage = {
 
 export type ConnectFormValues = {
   apiBaseUrl: string;
-  displayName: string;
-  prompt: string;
   createDailyRoom: boolean;
 };

@@ -18,11 +18,3 @@ export const getApiBaseUrl = () => {
   const extra = (Constants.expoConfig?.extra as { apiBaseUrl?: string } | undefined)?.apiBaseUrl;
   return sanitizeUrl(extra ?? DEFAULT_BASE_URL);
 };
-
-export const getDefaultUserName = () => {
-  const deviceName = Constants.deviceName;
-  if (deviceName && deviceName.length > 0) {
-    return deviceName;
-  }
-  return 'Guest';
-};

@@ -43,7 +43,7 @@ export const PreJoinScreen = () => {
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <Text style={styles.heading}>Pipecat Gemini Live</Text>
         <Text style={styles.subheading}>
-          Set your backend URL, introduce yourself, and start a realtime conversation powered by Gemini Live.
+          Set your backend URL and start a realtime conversation powered by Gemini Live.
         </Text>
 
         <View style={styles.card}>
@@ -58,30 +58,10 @@ export const PreJoinScreen = () => {
             autoCorrect={false}
           />
 
-          <Text style={styles.label}>Display name</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Alex"
-            placeholderTextColor={colors.muted}
-            value={form.displayName}
-            onChangeText={(text) => updateForm({ displayName: text })}
-          />
-
-          <Text style={styles.label}>Prompt</Text>
-          <TextInput
-            style={[styles.input, styles.textArea]}
-            multiline
-            numberOfLines={3}
-            placeholder="System prompt or context notes"
-            placeholderTextColor={colors.muted}
-            value={form.prompt}
-            onChangeText={(text) => updateForm({ prompt: text })}
-          />
-
           <View style={styles.switchRow}>
             <View>
               <Text style={styles.label}>Create a Daily room</Text>
-              <Text style={styles.helper}>Disable if you want to reuse an existing room URL.</Text>
+              <Text style={styles.helper}>Enable to auto-provision a fresh room. Disable to reuse an existing one.</Text>
             </View>
             <Switch
               value={form.createDailyRoom}
@@ -153,10 +133,6 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     color: colors.text,
     fontSize: 16,
-  },
-  textArea: {
-    minHeight: 90,
-    textAlignVertical: 'top',
   },
   switchRow: {
     flexDirection: 'row',

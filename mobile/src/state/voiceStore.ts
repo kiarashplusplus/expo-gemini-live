@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-import { getApiBaseUrl, getDefaultUserName } from '@/config/env';
+import { getApiBaseUrl } from '@/config/env';
 import { ConnectFormValues, StartSessionResponse, TranscriptMessage } from '@/types/rtvi';
 import { TransportState } from '@pipecat-ai/client-js';
 
@@ -31,8 +31,6 @@ export type VoiceSessionStore = {
 
 const defaultForm: ConnectFormValues = {
   apiBaseUrl: getApiBaseUrl(),
-  displayName: getDefaultUserName(),
-  prompt: 'You are a helpful AI guide who loves discussing travel and creative ideas.',
   createDailyRoom: true,
 };
 

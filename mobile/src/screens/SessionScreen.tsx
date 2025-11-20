@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { AudioMeter } from '@/components/AudioMeter';
@@ -14,6 +14,7 @@ export const SessionScreen = () => {
   const { connect, disconnect, sendText, tracks, clientState } = useVoiceSession();
   const status = useVoiceStore((state) => state.status);
   const botReady = useVoiceStore((state) => state.botReady);
+  const session = useVoiceStore((state) => state.session);
   const localLevel = useVoiceStore((state) => state.localLevel);
   const remoteLevel = useVoiceStore((state) => state.remoteLevel);
   const transcripts = useVoiceStore((state) => state.transcripts);
@@ -31,6 +32,34 @@ export const SessionScreen = () => {
   const localVideoTrack = tracks?.local?.video
     ? (tracks.local.video as unknown as DailyMediaTrack)
     : null;
+
+  const videoPipelineEnabled = session?.pipeline?.videoPipelineEnabled;
+
+  const botStatusLabel = useMemo(() => {
+    if (status === 'connecting') {
+      return 'Connecting to Gemini…';
+    }
+    if (status === 'connected' && !botReady) {
+      return 'Connected — warming up Gemini';
+    }
+    if (botReady || status === 'ready') {
+      return 'Gemini is live';
+    }
+    if (status === 'error') {
+      return 'Bot unavailable';
+    }
+    return 'Idle';
+  }, [botReady, status]);
+
+  const remoteVideoPlaceholder = useMemo(() => {
+    if (videoPipelineEnabled === false) {
+      return 'Video pipeline disabled for this session.';
+    }
+    if (!botReady) {
+      return 'Awaiting Gemini video handshake…';
+    }
+    return 'Gemini video will appear once streaming starts.';
+  }, [botReady, videoPipelineEnabled]);
 
   const handleSend = async () => {
     if (!message.trim()) {
@@ -58,10 +87,10 @@ export const SessionScreen = () => {
       <View style={styles.videoGrid}>
         <View style={styles.videoCard}>
           <VoiceClientVideoView videoTrack={remoteVideoTrack} audioTrack={remoteAudioTrack} style={styles.video} />
-          {!remoteVideoTrack && <Text style={styles.videoPlaceholder}>Waiting for Gemini video…</Text>}
+          {!remoteVideoTrack && <Text style={styles.videoPlaceholder}>{remoteVideoPlaceholder}</Text>}
           <View style={styles.videoOverlay}>
             <StatusBadge status={status} />
-            <Text style={styles.readyText}>{botReady ? 'Gemini is ready' : 'Waiting for bot…'}</Text>
+            <Text style={styles.readyText}>{botStatusLabel}</Text>
           </View>
         </View>
 

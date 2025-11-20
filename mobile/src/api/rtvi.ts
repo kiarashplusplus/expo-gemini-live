@@ -7,8 +7,6 @@ const sanitizeBaseUrl = (value: string) => value.replace(/\/+$/, '');
 export const buildStartPayload = (values: ConnectFormValues): StartSessionRequest => {
   return {
     createDailyRoom: values.createDailyRoom,
-    user: values.displayName ? { name: values.displayName } : undefined,
-    metadata: values.prompt ? { prompt: values.prompt } : undefined,
   };
 };
 

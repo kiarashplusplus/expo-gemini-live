@@ -80,7 +80,7 @@ class PipecatBotRunner:
         from pipecat.audio.turn.smart_turn.base_smart_turn import SmartTurnParams
         from pipecat.audio.vad.silero import SileroVADAnalyzer
         from pipecat.audio.vad.vad_analyzer import VADParams
-        from pipecat.frames.frames import Frame, UserImageRawFrame
+        from pipecat.frames.frames import Frame, LLMMessagesAppendFrame, UserImageRawFrame
         from pipecat.pipeline.pipeline import Pipeline
         from pipecat.pipeline.task import PipelineParams, PipelineTask
         from pipecat.processors.aggregators.llm_context import LLMContext
@@ -181,7 +181,37 @@ class PipecatBotRunner:
             params=PipelineParams(enable_metrics=True, enable_usage_metrics=True),
         )
 
+        self._register_system_instruction_hook(
+            transport=transport,
+            task=task,
+            session_id=config.session_id,
+            messages_frame_cls=LLMMessagesAppendFrame,
+        )
+
         return pipeline, task
+
+    def _register_system_instruction_hook(self, transport, task, session_id: str, messages_frame_cls):
+        """Push SYSTEM_INSTRUCTION to the LLM when the client connects."""
+
+        instruction = self._settings.system_instruction.strip()
+        if not instruction:
+            return
+
+        @transport.event_handler("on_client_connected")
+        async def _seed_system_instruction(_transport, _client):
+            logger.info("Queuing system instruction for session %s", session_id)
+            await task.queue_frames(
+                [
+                    messages_frame_cls(
+                        messages=[
+                            {
+                                "role": "system",
+                                "content": instruction,
+                            }
+                        ]
+                    )
+                ]
+            )
 
     def build_task(self, config: BotSessionConfig) -> asyncio.Task:
         """Convenience helper for spawning the pipeline in the background."""
