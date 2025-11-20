@@ -2,6 +2,8 @@
 
 End-to-end starter kit for building a realtime Pipecat experience that pairs a FastAPI backend with an Expo/React Native client. The backend provisions Daily rooms + tokens, runs a Pipecat pipeline that talks to Gemini Live, and exposes RTVI-friendly endpoints. The mobile app (currently the Expo blank TypeScript scaffold) will host the Pipecat RN SDK integration.
 
+> **TODO (next repo visit):** Before assuming Gemini sees video, upgrade Pipecat to the latest release, reinstall deps (`pip install -e "./server[dev]"`), and inspect `pipecat.services.google.gemini_live.GeminiModalities` / `GeminiLiveLLMService` to confirm a VIDEO enum and frame forwarding exist. If VIDEO appears, re-enable `GOOGLE_MODALITIES=AUDIO_AND_VIDEO` and rerun the end-to-end test flow.
+
 ## Repository Layout
 
 ```
@@ -71,11 +73,11 @@ pytest server/tests -q
 | `MOCK_DAILY` | Set `true` to bypass Daily REST calls and generate mock tokens. |
 | `GOOGLE_API_KEY` | Gemini Live API key for the Pipecat pipeline. |
 | `GOOGLE_MODEL`, `GOOGLE_VOICE_ID`, `GOOGLE_LANGUAGE`, `GOOGLE_REGION` | Voice + locale tuning plus routing hints for Gemini Live. |
-| `GOOGLE_API_VERSION`, `GOOGLE_MODALITIES` | Optional overrides for advanced Gemini Live features. |
+| `GOOGLE_API_VERSION`, `GOOGLE_MODALITIES` | Optional overrides for advanced Gemini Live features (`AUDIO_AND_VIDEO` enables video input). |
 | `SYSTEM_INSTRUCTION` | Default instructions given to Gemini for each session. |
 | `BOT_NAME` | Friendly display name for your Pipecat assistant. |
 | `BOT_RUNNER_ENABLED` | Toggle to disable the Pipecat runner during tests. |
-| `ENABLE_VIDEO_PIPELINE` | Gate Gemini Live video InputParams + debug processors before wiring camera streams. |
+| `ENABLE_VIDEO_PIPELINE` | When `true` (and `GOOGLE_MODALITIES=AUDIO_AND_VIDEO`), Pipecat forwards Daily camera frames to Gemini Live. |
 | `SESSION_TTL_SECONDS`, `CLEANUP_INTERVAL_SECONDS` | Session lifecycle timing knobs used by the cleanup service. |
 | `DUMMY_TOKENS_ENABLED` | Generate placeholder auth tokens for development flows. |
 
@@ -134,3 +136,4 @@ It activates the virtualenv, runs `pytest server/tests -q`, type-checks the Expo
 - **Missing Python packages**: Ensure the virtual environment is active (`which python` should point inside `.venv`).
 - **Module import errors in tests**: Confirm `pip install -e "./server[dev]"` ran successfully and you're using Python 3.11+.
 - **Daily API failures**: Toggle `MOCK_DAILY=true` locally or set `DAILY_SAMPLE_ROOM_URL` to reuse a test room until you have your API key ready.
+- **Gemini "can't see" video**: The backend currently installs Pipecat **0.0.94** (`pip show pipecat-ai`), whose `GeminiModalities` enum only exposes `TEXT` and `AUDIO`. `InputParams.modalities` therefore rejects strings like `AUDIO_AND_VIDEO`, and `GeminiLiveLLMService.handle_user_image_frame` is a no-op, so Daily camera frames never reach Gemini. To enable true video grounding you'll need a Pipecat release that adds a VIDEO modality plus frame forwarding—track their release notes and upgrade when that lands.

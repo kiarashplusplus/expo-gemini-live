@@ -100,18 +100,24 @@ class PipecatBotRunner:
             """Logs when Pipecat encounters video frames while forwarding them."""
 
             async def process_frame(self, frame: Frame, direction: FrameDirection):
+                await super().process_frame(frame, direction)
+
+                # System frames (Start/Cancel/etc.) are handled by the base class; just forward them.
                 if isinstance(frame, UserImageRawFrame):
                     logger.debug(
                         "VideoDebugProcessor observed frame (participant=%s, frame_size=%s)",
                         getattr(frame, "participant_id", "unknown"),
                         getattr(frame.image, "size", "n/a") if hasattr(frame, "image") else "n/a",
                     )
+
                 await self.push_frame(frame, direction)
 
         transport_params = DailyParams(
             api_key=self._settings.daily_api_key or "",
             audio_in_enabled=True,
             audio_out_enabled=True,
+            video_in_enabled=self._settings.enable_video_pipeline,
+            video_out_enabled=self._settings.enable_video_pipeline,
             vad_analyzer=SileroVADAnalyzer(params=VADParams(stop_secs=0.2)),
             turn_analyzer=LocalSmartTurnAnalyzerV3(params=SmartTurnParams()),
         )
@@ -125,14 +131,15 @@ class PipecatBotRunner:
         input_params_kwargs: Dict[str, Any] = {"language": self._settings.google_language}
 
         if self._settings.google_modalities:
+            normalized = self._settings.google_modalities.upper()
             try:
-                input_params_kwargs["modalities"] = GeminiModalities[
-                    self._settings.google_modalities.upper()
-                ]
+                input_params_kwargs["modalities"] = GeminiModalities[normalized]
             except KeyError:
                 logger.warning(
-                    "Unknown GOOGLE_MODALITIES value '%s'", self._settings.google_modalities
+                    "Unsupported GOOGLE_MODALITIES '%s'. Falling back to AUDIO-only pipeline.",
+                    self._settings.google_modalities,
                 )
+                input_params_kwargs["modalities"] = GeminiModalities.AUDIO
 
         if self._settings.enable_video_pipeline:
             input_params_kwargs["media_resolution"] = GeminiMediaResolution.MEDIUM
