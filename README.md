@@ -33,7 +33,7 @@ End-to-end starter kit for building a realtime Pipecat experience that pairs a F
 3. **Copy the sample environment and fill in secrets**
    ```bash
    cp .env.example .env
-   # edit .env with your Daily + Google credentials
+   # edit .env with your Daily, Google, and Expo base URL settings
    ```
 
 > The backend reads configuration via `pydantic-settings`, so any variable defined in `.env` automatically flows into `Settings`.
@@ -60,16 +60,24 @@ pytest server/tests -q
 
 | Variable | Purpose |
 | --- | --- |
+| `EXPO_PUBLIC_API_BASE_URL` | Base URL that the Expo app will call (e.g., `https://<tunnel>.ms` so devices can reach FastAPI). |
+| `API_PREFIX` | Route prefix for backend APIs (`/api` by default). |
+| `ALLOW_ORIGINS` | JSON array of dev/prod origins to allow through CORS (include Expo dev server ports). |
+| `LOG_LEVEL` | Controls FastAPI logging noise (`INFO`, `DEBUG`, etc.). |
+| `DAILY_API_KEY` | Lets the backend create Daily rooms and issue meeting tokens. |
+| `DAILY_API_URL` | Daily REST endpoint (usually `https://api.daily.co/v1`). |
+| `DAILY_SAMPLE_ROOM_URL` | Optional fixed room URL for local testing when you don't auto-create rooms. |
+| `DAILY_ROOM_EXP_MINUTES`, `DAILY_TOKEN_EXP_MINUTES` | Lifetimes (minutes) for ad-hoc rooms and Daily access tokens. |
+| `MOCK_DAILY` | Set `true` to bypass Daily REST calls and generate mock tokens. |
 | `GOOGLE_API_KEY` | Gemini Live API key for the Pipecat pipeline. |
-| `GOOGLE_MODEL`, `GOOGLE_VOICE_ID`, `GOOGLE_LANGUAGE` | Voice + locale tuning for Gemini Live. |
-| `DAILY_API_KEY` | Allows the backend to create Daily rooms and issue meeting tokens. |
-| `DAILY_SAMPLE_ROOM_URL` | Optional fixed room URL for local testing when `createDailyRoom=false`. |
-| `MOCK_DAILY` | Set to `true` to bypass Daily REST calls and generate mock tokens. |
-| `ALLOW_ORIGINS` | JSON array (e.g., `["http://localhost:8081"]`) of Expo dev server URLs for CORS. |
+| `GOOGLE_MODEL`, `GOOGLE_VOICE_ID`, `GOOGLE_LANGUAGE`, `GOOGLE_REGION` | Voice + locale tuning plus routing hints for Gemini Live. |
+| `GOOGLE_API_VERSION`, `GOOGLE_MODALITIES` | Optional overrides for advanced Gemini Live features. |
+| `SYSTEM_INSTRUCTION` | Default instructions given to Gemini for each session. |
+| `BOT_NAME` | Friendly display name for your Pipecat assistant. |
 | `BOT_RUNNER_ENABLED` | Toggle to disable the Pipecat runner during tests. |
-| `ENABLE_VIDEO_PIPELINE` | Gates Gemini Live video InputParams + debug processors so you can stage the flow before Pipecat emits webcam frames. |
-| `GOOGLE_API_VERSION` | Optional override passed to `HttpOptions(api_version=...)` (set to `v1alpha` for Gemini Live 2.5 video features). |
-| `GOOGLE_MODALITIES` | Optional `InputParams.modalities` override (`AUDIO` or `TEXT`). |
+| `ENABLE_VIDEO_PIPELINE` | Gate Gemini Live video InputParams + debug processors before wiring camera streams. |
+| `SESSION_TTL_SECONDS`, `CLEANUP_INTERVAL_SECONDS` | Session lifecycle timing knobs used by the cleanup service. |
+| `DUMMY_TOKENS_ENABLED` | Generate placeholder auth tokens for development flows. |
 
 See `.env.example` for the complete list with defaults.
 
