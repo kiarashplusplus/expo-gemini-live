@@ -33,6 +33,14 @@ class Settings(BaseSettings):
     google_voice_id: str = Field(default="Puck")
     google_language: str = Field(default="en-US")
     google_region: str | None = Field(default=None)
+    google_api_version: str | None = Field(
+        default=None,
+        description="Optional HttpOptions.api_version override when calling Gemini Live.",
+    )
+    google_modalities: str | None = Field(
+        default=None,
+        description="Optional InputParams.modalities override (TEXT or AUDIO).",
+    )
     system_instruction: str = Field(
         default=(
             "You are a helpful voice concierge for Pipecat demos."

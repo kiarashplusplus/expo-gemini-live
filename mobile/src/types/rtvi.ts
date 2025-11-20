@@ -32,6 +32,10 @@ export type StartSessionResponse = {
     startEndpoint: string;
     wsEndpoint?: string | null;
   };
+  pipeline: {
+    model: string;
+    videoPipelineEnabled: boolean;
+  };
 };
 
 export type SessionStatus = 'pending' | 'active' | 'stopped' | 'error';

@@ -68,6 +68,8 @@ pytest server/tests -q
 | `ALLOW_ORIGINS` | JSON array (e.g., `["http://localhost:8081"]`) of Expo dev server URLs for CORS. |
 | `BOT_RUNNER_ENABLED` | Toggle to disable the Pipecat runner during tests. |
 | `ENABLE_VIDEO_PIPELINE` | Gates Gemini Live video InputParams + debug processors so you can stage the flow before Pipecat emits webcam frames. |
+| `GOOGLE_API_VERSION` | Optional override passed to `HttpOptions(api_version=...)` (set to `v1alpha` for Gemini Live 2.5 video features). |
+| `GOOGLE_MODALITIES` | Optional `InputParams.modalities` override (`AUDIO` or `TEXT`). |
 
 See `.env.example` for the complete list with defaults.
 
@@ -103,9 +105,20 @@ Because Pipecat relies on native Daily modules, this project uses the [@daily-co
 
 Inside the app, tap **Start Conversation** on the Pre-Join screen. The provider will request camera/mic permissions up front, call `POST /api/rtvi/start`, join the Daily room via `RNDailyTransport`, and render the conversation with Gemini Live. Use the new **Restart Session** button on the session screen if you need to cycle the transport without leaving the call.
 
+## Verification script
+
+Before shipping changes to Gemini Live configuration, run the helper script from the repo root:
+
+```bash
+./scripts/verify-video.sh
+```
+
+It activates the virtualenv, runs `pytest server/tests -q`, type-checks the Expo app with `npx tsc --noEmit`, and then prints the manual steps for launching FastAPI + Expo (`npx expo start --clear`).
+
 ## Additional Documentation
 
 - `docs/architecture.md` – high-level system overview, runtime flow, and component responsibilities.
+- `docs/video-integration-plan.md` – detailed Gemini Live rollout guide plus the full `26-gemini-multimodal-live.py` reference snippet now mirrored locally.
 - `.github/copilot-instructions.md` – workspace-specific automation guardrails.
 
 ## Troubleshooting

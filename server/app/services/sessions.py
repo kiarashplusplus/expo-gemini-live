@@ -13,6 +13,7 @@ from fastapi import HTTPException, status
 
 from ..config import Settings
 from ..models import (
+    PipelineDiagnostics,
     RoomInfo,
     RTVIInfo,
     SessionStatus,
@@ -176,6 +177,10 @@ class SessionManager:
             room_url=record.room.room_url,
             expiresAt=record.expires_at,
             rtvi=rtvi,
+            pipeline=PipelineDiagnostics(
+                model=self._settings.google_model,
+                videoPipelineEnabled=self._settings.enable_video_pipeline,
+            ),
         )
 
     def _to_summary(self, record: SessionRecord) -> SessionSummary:

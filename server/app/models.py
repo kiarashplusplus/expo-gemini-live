@@ -57,6 +57,13 @@ class RoomInfo(BaseModel):
     name: str
 
 
+class PipelineDiagnostics(BaseModel):
+    """Surface server-side pipeline configuration to clients for debugging."""
+
+    model: str
+    video_pipeline_enabled: bool = Field(alias="videoPipelineEnabled")
+
+
 class StartSessionResponse(BaseModel):
     """Successful response from /api/rtvi/start."""
 
@@ -68,6 +75,7 @@ class StartSessionResponse(BaseModel):
     room_url_compat: HttpUrl = Field(alias="room_url")
     expires_at: datetime = Field(alias="expiresAt")
     rtvi: RTVIInfo
+    pipeline: PipelineDiagnostics
 
 
 class SessionSummary(BaseModel):

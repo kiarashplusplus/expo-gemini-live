@@ -60,6 +60,52 @@ task = PipelineTask(
     pipeline,
     params=PipelineParams(enable_metrics=True, enable_usage_metrics=True),
 )
+
+> **Official reference (`26-gemini-multimodal-live.py`)** – now mirrored locally for posterity:
+
+```python
+transport_params = {
+    "daily": lambda: DailyParams(
+        audio_in_enabled=True,
+        audio_out_enabled=True,
+        vad_analyzer=SileroVADAnalyzer(params=VADParams(stop_secs=0.5)),
+    ),
+    # ...twilio / webrtc omitted...
+}
+
+llm = GeminiMultimodalLiveLLMService(
+    api_key=os.getenv("GOOGLE_API_KEY"),
+    system_instruction="""
+    You are a helpful AI assistant.
+    ...
+    """,
+    voice_id="Puck",
+)
+
+pipeline = Pipeline([
+    transport.input(),
+    llm,
+    transport.output(),
+])
+
+task = PipelineTask(
+    pipeline,
+    params=PipelineParams(enable_metrics=True, enable_usage_metrics=True),
+)
+
+@transport.event_handler("on_client_connected")
+async def on_client_connected(_, __):
+    await task.queue_frames([
+        LLMMessagesAppendFrame(
+            messages=[{"role": "user", "content": "Greet the user and introduce yourself."}]
+        )
+    ])
+
+runner = PipelineRunner(handle_sigint=handle_sigint)
+await runner.run(task)
+```
+
+This mirrors our FastAPI backend’s `PipecatBotRunner`: swap `GeminiMultimodalLiveLLMService` for `GeminiLiveLLMService`, keep the `transport.input() -> llm -> transport.output()` shape, and wire the same `LLMMessagesAppendFrame` kick-off inside the Daily `onConnected` hook (or via our `LLMContextAggregatorPair`).
 ```
 
 **Video-specific pointer:** In the original example, Pipecat registers `transport.input()` with webcam capture enabled. When the Daily bot joins, Pipecat captures participant camera frames automatically (see `DailyTransport.capture_participant_video`). Ensure `transport_params.camera_out_enabled` remains `True` and the server logs show `Starting to capture [camera] video...` after a participant joins.
@@ -75,11 +121,11 @@ If the camera capture helper introduced in v0.0.95 (`maybe_capture_participant_c
 
 ## 3. Pending work items (mirrors active to-do list)
 
-- [ ] Capture exact Pipecat example snippet once we have a local copy of `26-gemini-multimodal-live.py` (track GitHub release or vendor files).
-- [ ] Document env overrides for switching to `gemini-live-2.5-flash` (`http_options=HttpOptions(api_version="v1alpha")`, `InputParams.modalities`).
-- [ ] Ensure the Expo app pins `@pipecat-ai/react-native-daily-transport` ≥ the version that forwards video frames.
+- [x] Capture exact Pipecat example snippet once we have a local copy of `26-gemini-multimodal-live.py` (embedded above for quick reference).
+- [x] Document env overrides for switching to `gemini-live-2.5-flash` (`GOOGLE_MODEL`, `GOOGLE_API_VERSION=v1alpha`, `GOOGLE_MODALITIES=AUDIO`, `ENABLE_VIDEO_PIPELINE=true`).
+- [x] Ensure the Expo app pins `@pipecat-ai/react-native-daily-transport` ≥ the version that forwards video frames (package.json now locks `@pipecat-ai/client-js@1.4.1` and `@pipecat-ai/react-native-daily-transport@1.4.0`).
 - [x] Extend `server/app/services/bot.py` to toggle video-specific InputParams once Gemini Live video is available (gated behind `ENABLE_VIDEO_PIPELINE`, adds `VideoDebugProcessor`, and enriches `InputParams.extra`).
-- [ ] Define a verification script (pytest + manual Expo call) to run after every config change.
+- [x] Define a verification script (pytest + Expo instructions) to run after every config change (`scripts/verify-video.sh`).
 
 Refer back to this file whenever the dev tunnel resets or the workspace reloads.
 
@@ -123,6 +169,13 @@ Refer back to this file whenever the dev tunnel resets or the workspace reloads.
 
 4. Run `/Users/home/Documents/Live/.venv/bin/python -m pytest server` and a manual Expo call to confirm the new model handshake succeeds.
 
+**Available env overrides**
+
+- `GOOGLE_MODEL` – switch between `gemini-live-2.5-flash`, preview SKUs, or fall back to `models/gemini-2.0-flash-live-001`.
+- `GOOGLE_API_VERSION` – sets `HttpOptions(api_version=...)` so features like affective dialog/proactivity can be enabled (use `v1alpha` for current Gemini Live private GA requirements).
+- `GOOGLE_MODALITIES` – optional override for Pipecat `InputParams.modalities` (accepts `TEXT` or `AUDIO`).
+- `ENABLE_VIDEO_PIPELINE` – flips the server-side feature flag that enriches `InputParams` with `GeminiMediaResolution.MEDIUM` and inserts the `VideoDebugProcessor`.
+
 ## 5. Mobile (Expo / React Native) video capture plan
 
 1. **Dependencies**
@@ -155,7 +208,7 @@ Refer back to this file whenever the dev tunnel resets or the workspace reloads.
     - When `ENABLE_VIDEO_PIPELINE` is true, enrich `InputParams` with `extra={"media_resolution": "MEDIA_RESOLUTION_MEDIUM"}` (or enum once exported) and optional `proactivity` block.
 4. **Custom processor stub** – implement a no-op `VideoDebugProcessor` class that logs when a `UserImageRawFrame` is seen. Insert it before `llm`. For now it will simply pass frames through so we are ready when Pipecat starts emitting them.
 5. **Telemetry + errors** – wrap `runner.run(task)` in `try/except TransportStartError` to include the current `GOOGLE_MODEL` in logs, helping diagnose model-specific issues when we flip to `gemini-live-2.5-flash`.
-6. **Tests** – extend `server/tests/test_api.py` with a regression test asserting `/api/rtvi/start` returns the currently configured model and feature flag state.
+6. **Tests** – extend `server/tests/test_api.py` with a regression test asserting `/api/rtvi/start` returns the currently configured model and feature flag state. ✅ Added `test_start_session_returns_credentials` assertions for `pipeline.model` + `pipeline.videoPipelineEnabled`.
 
 ## 7. Verification checklist (run after any config/model change)
 
@@ -178,3 +231,5 @@ Refer back to this file whenever the dev tunnel resets or the workspace reloads.
 
 5. **Log capture**
     - Archive the FastAPI + Expo logs after every test run so regressions can be compared when connection resets occur.
+
+> Shortcut: run `./scripts/verify-video.sh` from the repo root to automate steps 1–3 (backend tests + Expo type check) before doing the manual device run.

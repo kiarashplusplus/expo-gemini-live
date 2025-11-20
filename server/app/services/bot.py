@@ -7,6 +7,11 @@ import logging
 from dataclasses import dataclass, field
 from typing import Any, Dict
 
+try:  # pragma: no cover - optional dependency
+    from google.genai.types import HttpOptions
+except ModuleNotFoundError:  # pragma: no cover - google extras not installed
+    HttpOptions = None
+
 from ..config import Settings
 
 logger = logging.getLogger(__name__)
@@ -86,6 +91,7 @@ class PipecatBotRunner:
         from pipecat.services.google.gemini_live.llm import (
             GeminiLiveLLMService,
             GeminiMediaResolution,
+            GeminiModalities,
             InputParams,
         )
         from pipecat.transports.daily.transport import DailyParams, DailyTransport
@@ -117,11 +123,35 @@ class PipecatBotRunner:
         )
 
         input_params_kwargs: Dict[str, Any] = {"language": self._settings.google_language}
+
+        if self._settings.google_modalities:
+            try:
+                input_params_kwargs["modalities"] = GeminiModalities[
+                    self._settings.google_modalities.upper()
+                ]
+            except KeyError:
+                logger.warning(
+                    "Unknown GOOGLE_MODALITIES value '%s'", self._settings.google_modalities
+                )
+
         if self._settings.enable_video_pipeline:
-            input_params_kwargs["extra"] = {
-                "media_resolution": GeminiMediaResolution.MEDIUM.value,
-                "staging": "Video pipeline flag enabled",
-            }
+            input_params_kwargs["media_resolution"] = GeminiMediaResolution.MEDIUM
+            extra = input_params_kwargs.setdefault("extra", {})
+            extra.update(
+                {
+                    "media_resolution": GeminiMediaResolution.MEDIUM.value,
+                    "staging": "Video pipeline flag enabled",
+                }
+            )
+
+        http_options = None
+        if self._settings.google_api_version:
+            if HttpOptions is None:
+                logger.warning(
+                    "GOOGLE_API_VERSION set but google.genai HttpOptions unavailable."
+                )
+            else:
+                http_options = HttpOptions(api_version=self._settings.google_api_version)
 
         llm = GeminiLiveLLMService(
             api_key=self._settings.google_api_key or "",
@@ -129,6 +159,7 @@ class PipecatBotRunner:
             voice_id=self._settings.google_voice_id,
             system_instruction=self._settings.system_instruction,
             params=InputParams(**input_params_kwargs),
+            http_options=http_options,
         )
 
         context = LLMContext()
