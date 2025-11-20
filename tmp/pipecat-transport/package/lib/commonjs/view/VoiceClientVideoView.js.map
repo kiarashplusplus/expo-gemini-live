@@ -1,0 +1,1 @@
+{"version":3,"names":["_reactNativeDailyJs","require","VoiceClientVideoView","DailyMediaView","_default","exports","default"],"sourceRoot":"../../../src","sources":["view/VoiceClientVideoView.tsx"],"mappings":";;;;;;AAAA,IAAAA,mBAAA,GAAAC,OAAA;AACA,MAAMC,oBAAoB,GAAGC,kCAAc;AAAC,IAAAC,QAAA,GAAAC,OAAA,CAAAC,OAAA,GAC7BJ,oBAAoB","ignoreList":[]}

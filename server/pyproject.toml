@@ -1,0 +1,26 @@
+[project]
+name = "pipecat-gemini-server"
+version = "0.1.0"
+description = "FastAPI backend for Pipecat Gemini Live bot"
+authors = [{ name = "Your Name", email = "you@example.com" }]
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi>=0.111.0",
+    "uvicorn[standard]>=0.30.0",
+    "pipecat-ai[google,daily,websocket,local-smart-turn-v3]>=0.0.88",
+    "pydantic-settings>=2.5.0",
+    "python-dotenv>=1.0.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.2.0",
+    "pytest-asyncio>=0.23.0",
+    "httpx>=0.27.0",
+    "asgi-lifespan>=2.1.0",
+]
+
+[build-system]
+requires = ["setuptools>=69.0"]
+build-backend = "setuptools.build_meta"
