@@ -1,7 +1,7 @@
 .env
 .venv
 .venv/bin
-mobile
 server/__pycache__/
 server/.venv
 server/.env
+server/app/services/__pycache__/
